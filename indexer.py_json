@@ -1,0 +1,73 @@
+#! /usr/bin/python3
+
+import json
+import subprocess
+import xml.etree.ElementTree as ET
+
+file = "/mnt/mag_papers_9.txt"
+index_dir = "/tmp/solr/index_files"
+solr_home = "/opt/solr/"
+scripts_dir = "/home/azureuser/scripts/"
+collection = "OAG"
+
+
+with open(file) as f:
+	for line in f:
+		doc_dict = json.loads(line)
+		id = doc_dict['id']
+		title = str(doc_dict['title'])
+		authors = [ str(d['name']) for d in doc_dict['authors']]
+
+		if 'venue' in doc_dict:
+			venue = str(doc_dict['venue']['raw'])
+		else:
+			venue = None
+
+		year = str(doc_dict['year'])
+		n_citation = str(doc_dict['n_citation'])
+		page_start = str(doc_dict['page_start'])
+		page_end = str(doc_dict['page_end'])
+		publisher = str(doc_dict['publisher'])
+		doc_type = str(doc_dict['doc_type'])
+		volume = str(doc_dict['volume'])
+		issue = str(doc_dict['issue'])
+
+		top = ET.Element('add')
+		doc = ET.SubElement(top, 'doc')
+		id_field = ET.SubElement(doc, 'field',  {'name': 'id'})
+		id_field.text = id
+		title_field = ET.SubElement(doc, 'field',  {'name': 'title'})
+		title_field.text = title
+
+		for author in authors:
+			authors_field = ET.SubElement(doc, 'field',  {'name': 'authors'})
+			authors_field.text = author
+
+		if venue:
+			venue_field = ET.SubElement(doc, 'field',  {'name': 'venue'})
+			venue_field.text = venue
+
+		year_field = ET.SubElement(doc, 'field',  {'name': 'year'})
+		year_field.text = year
+		n_citation_field = ET.SubElement(doc, 'field',  {'name': 'n_citation'})
+		n_citation_field.text = n_citation
+		page_start_field = ET.SubElement(doc, 'field',  {'name': 'page_start'})
+		page_start_field.text = page_start
+		page_end_field = ET.SubElement(doc, 'field',  {'name': 'page_end'})
+		page_end_field.text = page_end
+		publisher_field = ET.SubElement(doc, 'field',  {'name': 'publisher'})
+		publisher_field.text = publisher
+		doc_type_field = ET.SubElement(doc, 'field',  {'name': 'doc_type'})
+		doc_type_field.text = doc_type
+		volume_field = ET.SubElement(doc, 'field',  {'name': 'volume'})
+		volume_field.text = volume
+		issue_field = ET.SubElement(doc, 'field',  {'name': 'issue'})
+		issue_field.text = issue
+
+		xmlcontent = ET.tostring(top, 'utf-8').decode()
+
+		f = open(index_dir + '/' + str(id)+ '.xml'  , 'w')
+		f.write(str(xmlcontent))
+		f.close()
+
+		subprocess.check_call([scripts_dir + 'store_doc.sh', solr_home + 'bin/post', collection, index_dir + '/' + str(id)+ '.xml'])
